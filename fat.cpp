@@ -1,9 +1,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <stddef.h>
-
+#include <stdlib.h>
 #include <list>
-
+#include <cstring>
+#include <cassert>
+#include <cstdlib>
+#include <unistd.h>
+#include <sys/types.h>
+#include <cstdio>
+#include <cstdarg>
 #include "fat.h"
 #include "fat_file.h"
 
@@ -113,6 +119,18 @@ FAT_FILESYSTEM * mini_fat_create(const char * filename, const int block_size, co
 	FAT_FILESYSTEM * fat = mini_fat_create_internal(filename, block_size, block_count);
 
 	// TODO: create the corresponding virtual disk file with appropriate size.
+	int size = block_size*block_count;
+	FILE *disk;
+	disk = fopen(filename, "wb+");
+	if(disk==NULL){
+		printf("File opening error!");
+	}else{
+		printf("\nOpened!\n");
+	}
+        fseek(disk, size , SEEK_SET);
+        fputc('\0', disk);
+        fclose(disk);
+        
 	return fat;
 }
 
