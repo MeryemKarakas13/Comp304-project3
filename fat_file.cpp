@@ -126,20 +126,35 @@ int mini_file_size(FAT_FILESYSTEM *fs, const char *filename) {
  * @return FAT_OPEN_FILE pointer on success, NULL on failure
  */
 FAT_OPEN_FILE * mini_file_open(FAT_FILESYSTEM *fs, const char *filename, const bool is_write)
-{
+{	
 	FAT_FILE * fd = mini_file_find(fs, filename);
+	
 	if (!fd) {
 		// TODO: check if it's write mode, and if so create it. Otherwise return NULL.
-		return NULL;
+		if (is_write) {
+			fd = mini_file_create_file(fs, filename);
+			if(!fd){
+				return NULL;
+			}
+		}else{
+			return NULL;
+		}
 	}
-
+	
 	if (is_write) {
 		// TODO: check if other write handles are open.
-		return NULL;
+		for (int i=0; i<fd->open_handles.size(); ++i) {
+			if(fd->open_handles[i]->is_write){
+				return NULL;
+			}
+		}
 	}
 
 	FAT_OPEN_FILE * open_file = new FAT_OPEN_FILE;
 	// TODO: assign open_file fields.
+	open_file->file = fd;
+	open_file->position = 0;
+	open_file->is_write = is_write;
 
 	// Add to list of open handles for fd:
 	fd->open_handles.push_back(open_file);
@@ -198,8 +213,19 @@ int mini_file_read(FAT_FILESYSTEM *fs, FAT_OPEN_FILE * open_file, const int size
 bool mini_file_seek(FAT_FILESYSTEM *fs, FAT_OPEN_FILE * open_file, const int offset, const bool from_start)
 {
 	// TODO: seek and return true.
+	if(from_start){
+		if(offset > mini_file_size( fs, ((open_file->file)->name) ) && (offset>=0)){
+			return false;
+		}
+		open_file->position = offset;
+	}else{
+		if((offset + open_file->position) > mini_file_size(fs, ((open_file->file)->name)) && ((offset+open_file->position)>=0)){
+			return false;
+		}
+		open_file->position = open_file->position + offset;
+	}
 
-	return false;
+	return true;
 }
 
 /**
@@ -211,6 +237,21 @@ bool mini_file_seek(FAT_FILESYSTEM *fs, FAT_OPEN_FILE * open_file, const int off
 bool mini_file_delete(FAT_FILESYSTEM *fs, const char *filename)
 {
 	// TODO: delete file after checks.
+	FAT_FILE * fd = mini_file_find(fs, filename);
+	if(!fd){
+		return false;
+	}else{
+		if(fd->open_handles.size() == 0){
+			int meta_block = fd->metadata_block_id;
+			fs->block_map[meta_block] = EMPTY_BLOCK;
+			for (int i=0; i<fd->block_ids.size(); ++i) {
+					fs->block_map[fd->block_ids[i]]= EMPTY_BLOCK;
+			}
+			return true;
+		}else{
+			return false;
+		}
+		
+	}
 
-	return false;
 }
