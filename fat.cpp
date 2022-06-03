@@ -28,11 +28,15 @@ int mini_fat_write_in_block(FAT_FILESYSTEM *fs, const int block_id, const int bl
 	assert(block_offset < fs->block_size);
 	assert(size + block_offset <= fs->block_size);
 
-	int written = 0;
+	//int written = 0;
 
 	// TODO: write in the real file.
+	FILE *write_ptr;
+	write_ptr = fopen(fs->filename,"wb"); 
+	write_ptr += (block_id*(fs->block_size) + block_offset);
+	fwrite(buffer,size,1,write_ptr);
 
-	return written;
+	return size;
 }
 
 /**
@@ -49,11 +53,15 @@ int mini_fat_read_in_block(FAT_FILESYSTEM *fs, const int block_id, const int blo
 	assert(block_offset < fs->block_size);
 	assert(size + block_offset <= fs->block_size);
 
-	int read = 0;
+	//int read = 0;
 
 	// TODO: read from the real file.
+	FILE *ptr;
+	ptr = fopen(fs->filename,"rb"); 
+	ptr += (block_id*(fs->block_size) + block_offset);
+	fread(buffer,size,1,ptr);
 
-	return read;
+	return size;
 }
 
 

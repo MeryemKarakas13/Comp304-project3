@@ -214,12 +214,12 @@ bool mini_file_seek(FAT_FILESYSTEM *fs, FAT_OPEN_FILE * open_file, const int off
 {
 	// TODO: seek and return true.
 	if(from_start){
-		if(offset > mini_file_size( fs, ((open_file->file)->name) ) && (offset>=0)){
+		if(offset > mini_file_size( fs, ((open_file->file)->name) ) || (offset<0)){
 			return false;
 		}
 		open_file->position = offset;
 	}else{
-		if((offset + open_file->position) > mini_file_size(fs, ((open_file->file)->name)) && ((offset+open_file->position)>=0)){
+		if((offset + open_file->position) > mini_file_size(fs, ((open_file->file)->name)) || ((offset+open_file->position)<0)){
 			return false;
 		}
 		open_file->position = open_file->position + offset;
