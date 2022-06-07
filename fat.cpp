@@ -33,7 +33,7 @@ int mini_fat_write_in_block(FAT_FILESYSTEM *fs, const int block_id, const int bl
 	// TODO: write in the real file.
 	FILE *write_ptr;
 	write_ptr = fopen(fs->filename,"wb"); 
-	write_ptr += (block_id*(fs->block_size) + block_offset);
+	fseek(write_ptr, block_id*(fs->block_size) + block_offset, SEEK_CUR);
 	fwrite(buffer,size,1,write_ptr);
 
 	return size;
@@ -56,9 +56,12 @@ int mini_fat_read_in_block(FAT_FILESYSTEM *fs, const int block_id, const int blo
 	//int read = 0;
 
 	// TODO: read from the real file.
-	FILE *ptr;
-	ptr = fopen(fs->filename,"rb"); 
-	ptr += (block_id*(fs->block_size) + block_offset);
+	FILE *ptr = fopen(fs->filename,"rb");
+	if(ptr == NULL){
+		printf("pointer is null\n");
+		return size;
+	}
+	fseek(ptr, block_id*(fs->block_size) + block_offset, SEEK_CUR);
 	fread(buffer,size,1,ptr);
 
 	return size;

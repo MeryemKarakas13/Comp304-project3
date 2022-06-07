@@ -186,7 +186,53 @@ int mini_file_write(FAT_FILESYSTEM *fs, FAT_OPEN_FILE * open_file, const int siz
 	int written_bytes = 0;
 
 	// TODO: write to file.
-
+	int i = open_file->position;
+	int b_size = fs->block_size;
+		
+	int how_many_block = 0;
+	if(size%fs->block_size == 0){
+		how_many_block = size/fs->block_size;
+	}else{
+		how_many_block = size/fs->block_size + 1 ;
+	}
+	
+	//incrrease size
+	FAT_FILE *fd = mini_file_find(fs, open_file->file->name);
+	int avail_size = fs->block_size - i% b_size;
+	if(avail_size > size){
+		int new_block_index = mini_fat_allocate_new_block(fs, FILE_DATA_BLOCK);
+		if (new_block_index == -1)
+		{
+			fprintf(stderr, "Cannot create new file '%s': filesystem is full.\n", open_file->file->name);
+			return NULL;
+		}
+		fd->block_ids.push_back(new_block_index);
+		const int blck_id = (open_file->file)->block_ids[i / b_size];
+		written_bytes += mini_fat_write_in_block(fs, blck_id, i % b_size, size, buffer);
+		printf("written bytes %d \n",written_bytes);
+		return written_bytes;
+	}
+	printf("First size %d \n",avail_size);
+	for(int j=0; j<how_many_block; j++){
+		i = open_file->position;
+		printf("First size %d \n",avail_size);
+		int new_block_index = mini_fat_allocate_new_block(fs, FILE_DATA_BLOCK);
+		if (new_block_index == -1)
+		{
+			fprintf(stderr, "Cannot create new file '%s': filesystem is full.\n", open_file->file->name);
+			return NULL;
+		}
+		fd->block_ids.push_back(new_block_index);
+		
+		const int blck_id = (open_file->file)->block_ids[i / b_size];
+		printf("Passed block id\n");
+		written_bytes += mini_fat_write_in_block(fs, blck_id, i % b_size, avail_size, buffer);
+		open_file->position += written_bytes;
+		avail_size = b_size - i% b_size;
+		printf("Passed inblock\n");
+	
+	}
+	printf("written bytes %d \n",written_bytes);
 	return written_bytes;
 }
 
@@ -199,6 +245,30 @@ int mini_file_read(FAT_FILESYSTEM *fs, FAT_OPEN_FILE * open_file, const int size
 	int read_bytes = 0;
 
 	// TODO: read file.
+	int i = open_file->position;
+	int b_size = fs->block_size;
+	int how_many_block = 0;
+	if(size%fs->block_size == 0){
+		how_many_block = size/fs->block_size;
+	}else{
+		how_many_block = size/fs->block_size + 1 ;
+	}
+	
+	FAT_FILE *fd = mini_file_find(fs, open_file->file->name);
+	int first_size = fs->block_size - i% b_size;
+	printf("First size %d \n",first_size);
+	for(int j=0; j<how_many_block; j++){
+		i = open_file->position;
+		printf("First size %d \n",first_size);
+		
+		const int blck_id = (open_file->file)->block_ids[i / b_size];
+		printf("Passed block id\n");
+		read_bytes += mini_fat_read_in_block(fs, blck_id, i % b_size, first_size, buffer);
+		open_file->position += read_bytes;
+		first_size = b_size - i% b_size;
+		printf("Passed inblock\n");
+	
+	}
 
 	return read_bytes;
 }
