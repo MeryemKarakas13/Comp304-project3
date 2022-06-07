@@ -20,4 +20,4 @@ mini_file_seek:
 	If the seek operation started from beginning of the file, we set curser position to offset. Otherwise, we moved 		curser by offset. Also, we compared new position with the size of the file before assigning new curser position.
 
 mini_file_delete:
-	First, we searched for the file in the given file system. If it exists and not open, we assigned its meta data 		block and data blocks to empty blocks, and we returned true. Otherwise, we returned false.
+	First, we searched for the file in the given file system. If it exists and not open, we assigned its meta data 		block and data blocks to empty blocks, and we returned true. Otherwise, we returned false. Also, we used the 		vector_delete_value function to delete file.

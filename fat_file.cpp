@@ -186,14 +186,12 @@ int mini_file_write(FAT_FILESYSTEM *fs, FAT_OPEN_FILE * open_file, const int siz
 	int written_bytes = 0;
 
 	// TODO: write to file.
-	int i = open_file->position;
-	int b_size = fs->block_size;
+	
 		
 	int remaining_size = size;
 	
 	FAT_FILE *fd = mini_file_find(fs, open_file->file->name);
-	int avail_size = fs->block_size - i% b_size;
-	if(avail_size >= size){
+	if(((open_file->file)->block_ids).empty()){
 		int new_block_index = mini_fat_allocate_new_block(fs, FILE_DATA_BLOCK);
 		if (new_block_index == -1)
 		{
@@ -201,18 +199,28 @@ int mini_file_write(FAT_FILESYSTEM *fs, FAT_OPEN_FILE * open_file, const int siz
 			return NULL;
 		}
 		fd->block_ids.push_back(new_block_index);
+	}
+	int i = open_file->position;
+	int b_size = fs->block_size;
+	int avail_size = fs->block_size - i% b_size;
+	if(avail_size >= size){
+	
 		const int blck_id = (open_file->file)->block_ids[i / b_size];
 		written_bytes += mini_fat_write_in_block(fs, blck_id, i % b_size, size, buffer);
 		(open_file->file)->size += size;
-		open_file->position += written_bytes;
+		open_file->position += size;
 		remaining_size = 0;
-		printf("written bytes %d \n",written_bytes);
 		return written_bytes;
+	}else if(avail_size > 0){
+		const int blck_id = (open_file->file)->block_ids[i / b_size];
+		written_bytes += mini_fat_write_in_block(fs, blck_id, i % b_size, avail_size, buffer);
+		(open_file->file)->size += avail_size;
+		open_file->position += avail_size;
+		remaining_size -= avail_size;
 	}
 	
 	while(remaining_size >= b_size){
-		i = open_file->position;
-		avail_size = fs->block_size - i% b_size;
+		
 		int new_block_index = mini_fat_allocate_new_block(fs, FILE_DATA_BLOCK);
 		if (new_block_index == -1)
 		{
@@ -221,14 +229,17 @@ int mini_file_write(FAT_FILESYSTEM *fs, FAT_OPEN_FILE * open_file, const int siz
 		}
 		fd->block_ids.push_back(new_block_index);
 		
+		i = open_file->position;
+		avail_size = fs->block_size - i% b_size;
 		const int blck_id = (open_file->file)->block_ids[i / b_size];
-		written_bytes += mini_fat_write_in_block(fs, blck_id, i % b_size, avail_size, buffer);
-		(open_file->file)->size += avail_size;
-		open_file->position += written_bytes;
+		written_bytes += mini_fat_write_in_block(fs, blck_id, i % b_size, b_size, buffer);
+		(open_file->file)->size += b_size;
+		open_file->position += b_size;
 		remaining_size -= b_size;
 	}
 	
 	if(remaining_size != 0){
+		
 		i = open_file->position;
 		avail_size = fs->block_size - i% b_size;
 		int new_block_index = mini_fat_allocate_new_block(fs, FILE_DATA_BLOCK);
@@ -240,13 +251,12 @@ int mini_file_write(FAT_FILESYSTEM *fs, FAT_OPEN_FILE * open_file, const int siz
 		fd->block_ids.push_back(new_block_index);
 		
 		const int blck_id = (open_file->file)->block_ids[i / b_size];
-		written_bytes += mini_fat_write_in_block(fs, blck_id, i % b_size, avail_size, buffer);
-		(open_file->file)->size += b_size;
-		open_file->position += written_bytes;
+		written_bytes += mini_fat_write_in_block(fs, blck_id, i % b_size, remaining_size, buffer);
+		(open_file->file)->size += remaining_size;
+		open_file->position += remaining_size;
 		remaining_size = 0;
 	}
 	
-	printf("written bytes %d \n",written_bytes);
 	return written_bytes;
 }
 
@@ -259,46 +269,54 @@ int mini_file_read(FAT_FILESYSTEM *fs, FAT_OPEN_FILE * open_file, const int size
 	int read_bytes = 0;
 
 	// TODO: read file.
-	int i = open_file->position;
-	int b_size = fs->block_size;
 	int remaining_size = size;
 	
-	FAT_FILE *fd = mini_file_find(fs, open_file->file->name);
-	if(fd->size == 0){
+	if(remaining_size <= 0){
 		return read_bytes;
 	}
+	FAT_FILE *fd = mini_file_find(fs, open_file->file->name);
+	if(((open_file->file)->block_ids).empty()){
+		return read_bytes;
+	}
+	int i = open_file->position;
+	int b_size = fs->block_size;
 	int avail_size = fs->block_size - i% b_size;
 	if(avail_size >= size){
-		
+	
 		const int blck_id = (open_file->file)->block_ids[i / b_size];
 		read_bytes += mini_fat_read_in_block(fs, blck_id, i % b_size, size, buffer);
-		(open_file->file)->size += size;
-		open_file->position += read_bytes;
+		open_file->position += size;
 		remaining_size = 0;
-		printf("readed bytes %d \n",read_bytes);
+		printf("came to read 1\n");
 		return read_bytes;
+	}else if(avail_size > 0){
+		const int blck_id = (open_file->file)->block_ids[i / b_size];
+		read_bytes += mini_fat_read_in_block(fs, blck_id, i % b_size, avail_size, buffer);
+		open_file->position += avail_size;
+		remaining_size -= avail_size;
+		printf("came to read 2\n");
 	}
 	
 	while(remaining_size >= b_size){
+		
 		i = open_file->position;
 		avail_size = fs->block_size - i% b_size;
-		
 		const int blck_id = (open_file->file)->block_ids[i / b_size];
-		read_bytes += mini_fat_read_in_block(fs, blck_id, i % b_size, avail_size, buffer);
-		(open_file->file)->size += avail_size;
-		open_file->position += read_bytes;
+		read_bytes += mini_fat_read_in_block(fs, blck_id, i % b_size, b_size, buffer);
+		open_file->position += b_size;
 		remaining_size -= b_size;
+		printf("came to read 3\n");
 	}
 	
 	if(remaining_size != 0){
+		
 		i = open_file->position;
 		avail_size = fs->block_size - i% b_size;
-		
 		const int blck_id = (open_file->file)->block_ids[i / b_size];
-		read_bytes += mini_fat_read_in_block(fs, blck_id, i % b_size, avail_size, buffer);
-		(open_file->file)->size += b_size;
-		open_file->position += read_bytes;
+		read_bytes += mini_fat_read_in_block(fs, blck_id, i % b_size, remaining_size, buffer);
+		open_file->position += remaining_size;
 		remaining_size = 0;
+		printf("came to read 3\n");
 	}
 
 	return read_bytes;
@@ -348,6 +366,7 @@ bool mini_file_delete(FAT_FILESYSTEM *fs, const char *filename)
 			for (int i=0; i<fd->block_ids.size(); ++i) {
 					fs->block_map[fd->block_ids[i]]= EMPTY_BLOCK;
 			}
+			vector_delete_value(fs->files, fd);
 			return true;
 		}else{
 			return false;
